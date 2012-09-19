@@ -18,10 +18,10 @@ a couple pixels off each side) and apply this to all the raw original images
 
 You can run p2xmp manualy on each file:
 
-'''
+```
 $ p2xmp
 usage: /usr/local/bin/p2xmp <file>.xmp ang,cx,cy,cw,ch
-'''
+```
 
 Or, use the following bash similiar to the following to do them all at once.
 A couple notes on this script:
@@ -34,7 +34,7 @@ A couple notes on this script:
  convert them (convert <.png> -quality 100% -compress LossLess <.jpg>) for 
  (hence the difference in names)
 
-'''
+```
 #!/bin/bash
 
 if [[ ${#1} == 0 ]]
@@ -153,4 +153,4 @@ else
 		fi
 	done
 fi
-'''
+```
