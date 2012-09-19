@@ -99,7 +99,7 @@ else
 			fi
 		fi
 
-		if [[ ${#rotate} != 0 ]]
+		if [[ ${#rotate} == 0 ]]
 		then
 			rotate=$(grep -aF 'ini.rotate' "$MF" | cut -d: -f2)
 		fi
@@ -126,7 +126,7 @@ else
 		echo "tilt: $tilt"
 		echo "cropxy: $cropxy"
 		echo "width: $width"
-		echo "height: $width"
+		echo "height: $height"
 		echo "rotate: $rotate"
 		#echo "first crop - numbers directly from picasa"
 		echo "p2xmp $f.xmp $tilt,$cropxy"
