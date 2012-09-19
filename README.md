@@ -1,6 +1,9 @@
 [p2xmp](http://github.com/vosbergw/p2xmp) is a utility to update the 
 Crop & Rotate filter of Darktable from the command line.
 
+**This utility also uses [imtag](http://github.com/vosbergw/imtag) so you will
+need it as well.**
+
 I successfully used this when moving my images from Picasa to Darktable to
 apply the same Crop & Rotate I had used in Picasa to the images in Darktable.
 
