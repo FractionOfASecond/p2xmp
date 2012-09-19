@@ -1,0 +1,233 @@
+#!/usr/bin/python
+
+'''
+This file is part of p2xmp.
+
+p2xmp is free software: you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation, either version 3 of the License, or
+(at your option) any later version.
+
+p2xmp is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with p2xmp.  If not, see <http://www.gnu.org/licenses/>.
+
+Copyright 2012 Wayne Vosberg <wayne.vosberg@mindtunnel.com>
+
+'''
+
+import pyexiv2
+import struct
+import array
+import sys
+import os
+import sqlite3
+import subprocess
+
+def unPack(buf):
+	''' unpack op_params '''
+	print '\n'
+	if type(buf) == str and len(buf) == 56:
+		val = buf
+		#print 'converting string: %s'%buf
+	elif len(buf) == 28:
+		#print 'converting buffer: (%d)%s'%(len(buf),buf)
+		val=''
+		for B in buf:
+			val+='%02x'%ord(B)
+	else:
+		raise ValueError('buf (len:%d)(type:%s)(str:%s) not understood!!!'%\
+			(len(buf),type(buf),buf))
+
+	#print 'val:[%s](%d)'%(val,len(val))
+	s_ang = val[0:8]
+	s_cx = val[8:16]
+	s_cy = val[16:24]
+	s_cw = val[24:32]
+	s_ch = val[32:40]
+	s_k_h = val[40:48]
+	s_k_v = val[48:56]
+
+	ang = struct.unpack('<f',s_ang.decode('hex'))[0]
+	cx = struct.unpack('<f',s_cx.decode('hex'))[0]
+	cy = struct.unpack('<f',s_cy.decode('hex'))[0]
+	cw = struct.unpack('<f',s_cw.decode('hex'))[0]
+	ch = struct.unpack('<f',s_ch.decode('hex'))[0]
+	k_h = struct.unpack('<f',s_k_h.decode('hex'))[0]
+	k_v = struct.unpack('<f',s_k_v.decode('hex'))[0]
+
+	fmt = '%10s%10s%10s%10s%10s%10s%10s'
+	print fmt%('angle','cx','cy','cw','ch','k_h','k_v')
+	print fmt%(s_ang,s_cx,s_cy,s_cw,s_ch,s_k_h,s_k_v)
+	print ' %9.4f %9.4f %9.4f %9.4f %9.4f %9.4f %9.4f'%(ang,cx,cy,cw,ch,k_h,k_v)
+
+
+##########################################################################
+#
+# main program
+#
+
+
+# check cmdline
+try:
+	print 'file: ',sys.argv[1]
+	(nAng,nCx,nCy,nCw,nCh) = eval(sys.argv[2])
+except:
+	print 'usage: %s <file>.xmp ang,cx,cy,cw,ch '%sys.argv[0]
+	print '       angle is clockwise positive'
+	sys.exit()
+
+xmpName = sys.argv[1]
+imageName,extension = os.path.splitext(os.path.basename(xmpName))
+pathName = os.path.abspath(os.path.dirname(xmpName))
+
+# read the metadata from the sidecar
+try:
+	md = pyexiv2.ImageMetadata(xmpName)
+	md.read()
+except:
+	print 'error reading ',xmpName
+	sys.exit()
+
+# connect to the darktable library.db file
+try:
+	conn = sqlite3.connect(os.getenv("HOME")+'/.config/darktable/library.db')
+	conn.row_factory = sqlite3.Row
+	c = conn.cursor()
+except:
+	print 'error connectin to library.db: ',sys.exc_info()[1]
+	sys.exit()
+
+	
+
+print '\n###############################################  %s xmp keys:'%xmpName
+try:
+	for k in md.xmp_keys:
+		print k,'=',md[k].raw_value
+except:
+	print sys.exc_info()[1]
+
+# the interesting keys for crop & rotate
+ver='Xmp.darktable.history_modversion'
+ena='Xmp.darktable.history_enabled'
+op='Xmp.darktable.history_operation'
+param='Xmp.darktable.history_params'
+bop='Xmp.darktable.blendop_params'
+
+newXmp={}
+newXmp[ver]=md[ver].raw_value
+newXmp[ena]=md[ena].raw_value
+newXmp[op]=md[op].raw_value
+newXmp[param]=md[param].raw_value
+newXmp[bop]=md[bop].raw_value
+
+try:
+	print '\n   %16s%16s%16s%57s%25s'%\
+		('modversion','enabled','operation','op_params','blendop_params'),
+	for i in range(0,len(md[ver].raw_value)):
+		print '\n[%d]'%i,
+		print '%15s'%md[ver].raw_value[i],
+		print '%15s'%md[ena].raw_value[i],
+		print '%15s'%md[op].raw_value[i],
+		print '%15s'%md[param].raw_value[i],
+		print '%15s'%md[bop].raw_value[i],
+
+	for i in range(0,len(md[ver].raw_value)):
+		#val = md[param].raw_value[i]
+		#print 'md[%s]=%s (%s)'%(param,md[param].raw_value[i],\
+		#	type(md[param].raw_value[i]))
+		unPack(md[param].raw_value[i])
+except:
+	print 'no keys in %s (%s)'%(xmpName,sys.exc_info()[1])
+	sys.exit() 
+
+
+print '\n############################################  library.db entries:'
+
+# find filmroll
+try:
+	print 'looking for: [%s]'%pathName
+	t = (pathName,)
+	albumId = c.execute('select id from film_rolls where folder = ?',t).\
+		fetchone()[0]
+	if albumId == None:
+		print 'no such album [%s]!'%pathName
+		sys.exit()
+	t=(imageName,albumId)
+	IM=c.execute('select * from images where filename = ? and film_id = ?',t).\
+		fetchone()
+	imgId = IM['id']
+	filmid = IM['film_id']
+	print '%s is imgId %d on film roll %d\n'%(xmpName,imgId,albumId)
+
+	if c.fetchone() != None:
+		print 'error! images table seems to have more than one entry!'
+		sys.exit()
+
+	# find history entries
+	i=0
+	op_str=[]
+	blendop_str=[]
+	fmt='%10s%10s%10s%10s%60s%10s%40s'
+	for HI in c.execute('select * from history where imgId = ?',(imgId,)):
+		if i == 0:
+			print '   ',
+			print fmt%(HI.keys()[0],HI.keys()[1],HI.keys()[2],HI.keys()[3],\
+				HI.keys()[4],HI.keys()[5],HI.keys()[6])
+
+		print '[%d]'%i,
+		print fmt%(HI[0],HI[1],HI[2],HI[3],\
+			str(HI[4]).encode('hex'),HI[5],str(HI[6]).encode('hex'))
+
+		#print 'op_params: (%d)(%s)=%s'%\
+		#	(len(HI['op_params']),type(HI['op_params']),HI['op_params'])
+		op_str.append(HI['op_params'])
+		blendop_str.append(HI['blendop_params'])
+		i+=1
+
+
+	for i in range(0,len(op_str)):
+		unPack(op_str[i])
+
+except:
+	print 'error: ',sys.exc_info()[1]
+	sys.exit()
+
+
+
+
+print '\n############################################  new values:'
+
+
+newXmp[ver]='3'
+newXmp[ena]='1'
+newXmp[op]='clipping'
+
+newOpXmp = struct.pack('<fffffff',nAng,nCx,nCy,nCw,nCh,0.0,0.0)
+newBopXmp = struct.pack('<fff',0,0,0)
+
+newXmp[param]=str(newOpXmp).encode('hex')
+newXmp[bop]=str(newBopXmp).encode('hex')
+
+cmd=['imtag', '-q']
+for k in newXmp.iterkeys():
+	cmd.append('-s%s=\"%s\"'%(k,newXmp[k]))
+cmd.append(xmpName)
+print cmd
+
+subprocess.call(cmd)
+
+# set this entry to 1+ the number of entries (0 based).  
+# assuming entries are sequential ...
+n = c.execute('select num from history where imgid = ?',(imgId,)).fetchall()
+entry = len(n)
+	
+c.execute('insert into history values(?,?,?,?,?,?,?)',(imgId,entry,3,'clipping',sqlite3.Binary(newOpXmp),1,sqlite3.Binary(newBopXmp)))
+conn.commit()
+print 'changes: %d'%conn.total_changes
+
+c.close()
