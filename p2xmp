@@ -217,7 +217,7 @@ cmd=['imtag', '-q']
 for k in newXmp.iterkeys():
 	cmd.append('-s%s=\"%s\"'%(k,newXmp[k]))
 cmd.append(xmpName)
-print cmd
+# print cmd
 
 subprocess.call(cmd)
 
@@ -228,6 +228,6 @@ entry = len(n)
 	
 c.execute('insert into history values(?,?,?,?,?,?,?)',(imgId,entry,3,'clipping',sqlite3.Binary(newOpXmp),1,sqlite3.Binary(newBopXmp)))
 conn.commit()
-print 'changes: %d'%conn.total_changes
+print 'library.db changes: %d'%conn.total_changes
 
 c.close()
