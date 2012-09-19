@@ -26,16 +26,15 @@ $ p2xmp
 usage: /usr/local/bin/p2xmp <file>.xmp ang,cx,cy,cw,ch
 ```
 
-Or, use the following bash similiar to the following to do them all at once.
+Or, use a bash script similiar to the following to do them all at once.
 A couple notes on this script:
 
 * it should run from the directory containing the Darktable image and xmp files.
 * it expects .meta files as created by [metaSave](http://projects.mindtunnel.com/blog/2012/08/30/metasave/)
-* after updating it will move the .meta files to the current directory (which is the first place it will look as well)
+* after updating Darktable it will move the .meta files to the current directory (which is the first place it will look for them as well)
 * note the .png checks: the Picasa files were .png and that is what I used when
  metaSave was run.  Darktable doesn't support .png on import so I had to 
- convert them (convert <.png> -quality 100% -compress LossLess <.jpg>) for 
- (hence the difference in names)
+ convert them (convert <.png> -quality 100% -compress LossLess <.jpg>) 
 
 ```
 #!/bin/bash
