@@ -97,6 +97,7 @@ except:
 try:
 	conn = sqlite3.connect(os.getenv("HOME")+'/.config/darktable/library.db')
 	conn.row_factory = sqlite3.Row
+	conn.text_factory = str
 	c = conn.cursor()
 except:
 	print 'error connectin to library.db: ',sys.exc_info()[1]
