@@ -1,3 +1,13 @@
+p2xmp has been deprecated!
+==========================
+
+Please see [dt](http://github.com/vosbergw/dt) for the replacement tool.
+
+***
+***
+***
+
+
 [p2xmp](http://github.com/vosbergw/p2xmp) is a utility to update the 
 Crop & Rotate filter of Darktable from the command line.
 
